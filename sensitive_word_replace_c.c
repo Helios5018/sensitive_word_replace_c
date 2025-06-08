@@ -14,7 +14,7 @@ long get_file_size(FILE* file_ptr) {
 
 int main() {
     // 打开文件
-    FILE* file_ptr = _wfopen(L"重生80.txt", L"rb");
+    FILE* file_ptr = _wfopen(L"test_novel.txt", L"rb");
     if (file_ptr == NULL) {
         printf("File open failed.\n");
         return 1;
@@ -39,7 +39,6 @@ int main() {
 
     // 输出文件内容
     printf("%s\n", novel_content);
-
 
     return 0;
 }
