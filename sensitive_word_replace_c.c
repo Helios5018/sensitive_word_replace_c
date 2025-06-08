@@ -74,12 +74,23 @@ long get_file_size(const wchar_t* novel_address) {
     return file_size;
 }
 
-int get_novel_content(const wchar_t* novel_address, char* novel_content, long file_size) {
+char* get_novel_content(const wchar_t* novel_address) {
     // 打开文件
     FILE* file_ptr = _wfopen(novel_address, L"rb");
     if (file_ptr == NULL) {
         printf("File open failed.\n");
-        return 1;
+        return NULL;
+    }
+
+    // 获取文件大小
+    long file_size = get_file_size(novel_address);
+
+    // 使用malloc动态分配内存（在堆上分配）
+    char* novel_content = (char*)malloc((file_size + 10) * sizeof(char));
+    if (novel_content == NULL) {
+        printf("Memory allocation failed.\n");
+        fclose(file_ptr);
+        return NULL;
     }
 
     // 读取文件内容（字符串）到内存中
@@ -93,17 +104,19 @@ int get_novel_content(const wchar_t* novel_address, char* novel_content, long fi
     // 关闭文件
     fclose(file_ptr);
 
-    return 0;
+    return novel_content;
 }
 
 int main() {
-    // 读取小说长度
-    long file_size = get_file_size(L"重生80.txt");
-
+    // 输入小说地址
+    const wchar_t* novel_address = L"重生80.txt";
+    
     // 获取小说字符串
-    char novel_content[file_size+10];
-    get_novel_content(L"重生80.txt", novel_content, file_size);
+    char* novel_content = get_novel_content(novel_address);
     printf("%s\n", novel_content);
+
+    // 释放小说字符串内存
+    free(novel_content);
 
     // 读取敏感词列表
     char** sensitive_words = get_sensitive_words_list();
