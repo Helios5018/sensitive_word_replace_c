@@ -134,16 +134,39 @@ int main() {
     
     // 获取小说字符串
     char* novel_content = get_novel_content(novel_address);
-    printf("%s\n", novel_content);
+    //printf("%s\n", novel_content);
 
-    // 释放小说字符串内存
-    free(novel_content);
 
-    // 读取敏感词列表
+    // 获取敏感词列表
     char** sensitive_words = get_sensitive_words_list();
+    /*
     for (int i =0; sensitive_words[i] != NULL; i++) {
         printf("%s\n", sensitive_words[i]);
     }
+    */
+
+    // 敏感词替换
+    // 遍历小说字符串
+    for (int j = 0; novel_content[j] != '\0'; j++) {
+        // 遍历敏感词列表
+        for (int k = 0; sensitive_words[k] != NULL; k++) {
+            char novel_word[256];
+            int word_len = strlen(sensitive_words[k]);
+            
+            // 检查是否有足够的字符进行比较
+            if (j + word_len <= strlen(novel_content)) {
+                strncpy(novel_word, novel_content + j, word_len);
+                novel_word[word_len] = '\0';  // 确保字符串正确终止
+            }
+            // 使用strcmp进行字符串比较
+            if (strcmp(novel_word, sensitive_words[k]) == 0) {
+                printf("sensitive word: %s\n", sensitive_words[k]);
+            }
+        }
+    }
+
+    // 释放小说字符串内存
+    free(novel_content);
 
     // 释放敏感词数组内存
     for (int i =0; sensitive_words[i] != NULL; i++) {
