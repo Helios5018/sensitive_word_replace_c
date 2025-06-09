@@ -3,6 +3,10 @@
 #include <wchar.h>
 #include <string.h>
 
+/**
+ * 读取敏感词列表
+ * @return 敏感词字符串数组，以NULL结尾，失败返回NULL
+ */
 char** get_sensitive_words_list(){
     FILE* sensitive_words_file_ptr; 
     char** sensitive_words = NULL;
@@ -58,25 +62,35 @@ char** get_sensitive_words_list(){
     return sensitive_words;
 }
 
-long get_file_size(const wchar_t* novel_address) {
+/**
+ * 获取文件大小
+ * @param novel_address 小说文件路径
+ * @return 文件大小（字节数），失败返回-1
+ */
+long get_file_size(const char* novel_address) {
     // 打开文件
-    FILE* file_ptr = _wfopen(novel_address, L"rb");
+    FILE* file_ptr = fopen(novel_address, "rb");
     if (file_ptr == NULL) {
         printf("File open failed.\n");
-        return 1;
+        return -1;
     }
     // 获取文件大小
     long file_size = 0;
     fseek(file_ptr, 0, SEEK_END);
     file_size = ftell(file_ptr);
     //printf("file_size: %ld\n", file_size);
-    fseek(file_ptr, 0, SEEK_SET);
+    fclose(file_ptr);
     return file_size;
 }
 
-char* get_novel_content(const wchar_t* novel_address) {
+/**
+ * 读取小说文件内容
+ * @param novel_address 小说文件路径
+ * @return 文件内容字符串，失败返回NULL
+ */
+char* get_novel_content(const char* novel_address) {
     // 打开文件
-    FILE* file_ptr = _wfopen(novel_address, L"rb");
+    FILE* file_ptr = fopen(novel_address, "rb");
     if (file_ptr == NULL) {
         printf("File open failed.\n");
         return NULL;
@@ -84,6 +98,10 @@ char* get_novel_content(const wchar_t* novel_address) {
 
     // 获取文件大小
     long file_size = get_file_size(novel_address);
+    if (file_size == -1) {
+        fclose(file_ptr);
+        return NULL;
+    }
 
     // 使用malloc动态分配内存（在堆上分配）
     char* novel_content = (char*)malloc((file_size + 10) * sizeof(char));
@@ -107,9 +125,12 @@ char* get_novel_content(const wchar_t* novel_address) {
     return novel_content;
 }
 
+/**
+ * 主函数 - 敏感词替换程序入口
+ */
 int main() {
     // 输入小说地址
-    const wchar_t* novel_address = L"重生80.txt";
+    const char* novel_address = "重生80.txt";
     
     // 获取小说字符串
     char* novel_content = get_novel_content(novel_address);
