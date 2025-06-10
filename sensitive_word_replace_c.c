@@ -57,8 +57,6 @@ char** get_sensitive_words_list(){
     // 关闭敏感词文件
     fclose(sensitive_words_file_ptr);
 
-
-
     return sensitive_words;
 }
 
@@ -136,7 +134,6 @@ int main() {
     char* novel_content = get_novel_content(novel_address);
     //printf("%s\n", novel_content);
 
-
     // 获取敏感词列表
     char** sensitive_words = get_sensitive_words_list();
     /*
@@ -145,14 +142,22 @@ int main() {
     }
     */
 
-    // 敏感词替换
+    // 构建敏感词定位数组
+    typedef struct {
+        char* novel_sensitive_word ;
+        int novel_sensitive_word_index;
+        int novel_sensitive_word_len;
+    } novel_sensitive_word_struct;
+
+    novel_sensitive_word_struct novel_sensitive_word_array[100];
+    int  sensitive_word_count = 0;
+
     // 遍历小说字符串
+    char novel_word[256];
     for (int j = 0; novel_content[j] != '\0'; j++) {
         // 遍历敏感词列表
         for (int k = 0; sensitive_words[k] != NULL; k++) {
-            char novel_word[256];
             int word_len = strlen(sensitive_words[k]);
-            
             // 检查是否有足够的字符进行比较
             if (j + word_len <= strlen(novel_content)) {
                 strncpy(novel_word, novel_content + j, word_len);
@@ -160,9 +165,31 @@ int main() {
             }
             // 使用strcmp进行字符串比较
             if (strcmp(novel_word, sensitive_words[k]) == 0) {
-                printf("sensitive word: %s\n", sensitive_words[k]);
+                // 敏感词定位
+                // 判断敏感词数量是否超过限制
+                if (sensitive_word_count >= 100) {
+                    printf("sensitive word array > 100.\n");
+                    return -1;
+                }
+                // 敏感词定位数组赋值
+                novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word = sensitive_words[k];
+                novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word_index = j;
+                novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word_len = word_len;
+                sensitive_word_count++;
+                // 提高替换效率
+                j = j + word_len;
+                break;
             }
         }
+    }
+
+    // 打印所有找到的敏感词信息
+    printf("\n找到的敏感词总数: %d\n", sensitive_word_count);
+    for (int i = 0; i < sensitive_word_count; i++) {
+        printf("敏感词: %s, 位置: %d, 长度: %d\n", 
+            novel_sensitive_word_array[i].novel_sensitive_word,
+            novel_sensitive_word_array[i].novel_sensitive_word_index,
+            novel_sensitive_word_array[i].novel_sensitive_word_len);
     }
 
     // 释放小说字符串内存
