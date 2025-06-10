@@ -14,7 +14,7 @@ char** get_sensitive_words_list(){
     int sensitive_word_count = 0;
 
     // 打开敏感词文件
-    sensitive_words_file_ptr = fopen("./sensitive_words/sw_all_test.txt", "rb");
+    sensitive_words_file_ptr = fopen("./sensitive_words/sw_all.txt", "rb");
     if (sensitive_words_file_ptr == NULL) {
         printf("File open failed.\n");
         return NULL;
@@ -26,13 +26,24 @@ char** get_sensitive_words_list(){
         line_content[strcspn(line_content, "\n")] = '\0';
         //printf("line_content: %s\n", line_content);
 
-        // 动态扩展敏感词数组大小
-        sensitive_words = (char**)realloc(sensitive_words, (sensitive_word_count + 2) * sizeof(char*));
-        if (sensitive_words == NULL) {
-            printf("Memory re-allocation failed.\n");
-            free(sensitive_words);
-            fclose(sensitive_words_file_ptr);
-            return NULL;
+        // 预分配足够的内存，减少realloc调用
+        if (sensitive_word_count == 0) {
+            // 初次分配，预估敏感词数量为5000个
+            sensitive_words = (char**)malloc(5000 * sizeof(char*));
+            if (sensitive_words == NULL) {
+                printf("Memory allocation failed.\n");
+                fclose(sensitive_words_file_ptr);
+                return NULL;
+            }
+        } else if (sensitive_word_count % 1000 == 0) {
+            // 每1000个词重新分配一次内存
+            sensitive_words = (char**)realloc(sensitive_words, (sensitive_word_count + 1000) * sizeof(char*));
+            if (sensitive_words == NULL) {
+                printf("Memory re-allocation failed.\n");
+                free(sensitive_words);
+                fclose(sensitive_words_file_ptr);
+                return NULL;
+            }
         }
 
         // 为当前词语分配内存
@@ -109,13 +120,9 @@ char* get_novel_content(const char* novel_address) {
         return NULL;
     }
 
-    // 读取文件内容（字符串）到内存中
-    int i = 0;
-    char get_char;
-    while((get_char = fgetc(file_ptr)) != EOF && i < file_size) {
-        novel_content[i++] = (char)get_char;
-    }
-    novel_content[i] = '\0';
+    // 使用fread一次性读取整个文件
+    size_t bytes_read = fread(novel_content, 1, file_size, file_ptr);
+    novel_content[bytes_read] = '\0';
 
     // 关闭文件
     fclose(file_ptr);
@@ -128,7 +135,7 @@ char* get_novel_content(const char* novel_address) {
  */
 int main() {
     // 输入小说地址
-    const char* novel_address = "重生80.txt";
+    const char* novel_address = "test_novel.txt";
     
     // 获取小说字符串
     char* novel_content = get_novel_content(novel_address);
@@ -152,44 +159,36 @@ int main() {
     novel_sensitive_word_struct novel_sensitive_word_array[100];
     int  sensitive_word_count = 0;
 
+    // 预计算文本长度，避免重复计算
+    int novel_len = strlen(novel_content);
+    
     // 遍历小说字符串
-    char novel_word[256];
-    for (int j = 0; novel_content[j] != '\0'; j++) {
+    for (int j = 0; j < novel_len; j++) {
         // 遍历敏感词列表
         for (int k = 0; sensitive_words[k] != NULL; k++) {
             int word_len = strlen(sensitive_words[k]);
             // 检查是否有足够的字符进行比较
-            if (j + word_len <= strlen(novel_content)) {
-                strncpy(novel_word, novel_content + j, word_len);
-                novel_word[word_len] = '\0';  // 确保字符串正确终止
-            }
-            // 使用strcmp进行字符串比较
-            if (strcmp(novel_word, sensitive_words[k]) == 0) {
-                // 敏感词定位
-                // 判断敏感词数量是否超过限制
-                if (sensitive_word_count >= 100) {
-                    printf("sensitive word array > 100.\n");
-                    return -1;
+            if (j + word_len <= novel_len) {
+                // 直接使用strncmp比较
+                if (strncmp(novel_content + j, sensitive_words[k], word_len) == 0) {
+                    // 敏感词定位
+                    // 判断敏感词数量是否超过限制
+                    if (sensitive_word_count >= 100) {
+                        printf("sensitive word array > 100.\n");
+                        return -1;
+                    }
+                    // 敏感词定位数组赋值
+                    novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word = sensitive_words[k];
+                    novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word_index = j;
+                    novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word_len = word_len;
+                    sensitive_word_count++;
+                    printf("敏感词: %s, 位置: %d, 长度: %d\n",sensitive_words[k], j, word_len);
+                    // 提高替换效率
+                    j = j + word_len-1;
+                    break;
                 }
-                // 敏感词定位数组赋值
-                novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word = sensitive_words[k];
-                novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word_index = j;
-                novel_sensitive_word_array[sensitive_word_count].novel_sensitive_word_len = word_len;
-                sensitive_word_count++;
-                // 提高替换效率
-                j = j + word_len;
-                break;
             }
         }
-    }
-
-    // 打印所有找到的敏感词信息
-    printf("\n找到的敏感词总数: %d\n", sensitive_word_count);
-    for (int i = 0; i < sensitive_word_count; i++) {
-        printf("敏感词: %s, 位置: %d, 长度: %d\n", 
-            novel_sensitive_word_array[i].novel_sensitive_word,
-            novel_sensitive_word_array[i].novel_sensitive_word_index,
-            novel_sensitive_word_array[i].novel_sensitive_word_len);
     }
 
     // 释放小说字符串内存
